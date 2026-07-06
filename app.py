@@ -14,7 +14,7 @@ Control surface
 ----------------
 All run controls (Market, Date, SMA10/EMA10 thresholds, Run Analysis)
 live in ONE place: the left sidebar (ui/sidebar.py). There is no
-duplicate "Settings" tab — navigation only has the 6 content sections.
+duplicate "Settings" tab — navigation only has the 9 content sections.
 The sidebar starts expanded since it's the primary control surface, not
 a secondary one.
 
@@ -27,10 +27,11 @@ allowed to do so. Run with: streamlit run app.py
 from datetime import datetime
 
 import pytz
+import pandas as pd
 import streamlit as st
 
 from config.settings import PAGE_TITLE, PAGE_ICON, TIMEZONES
-from config.stocks_config import INDIAN_STOCKS, USA_STOCKS, INDIA_INDEXES
+from config.stocks_config import INDIAN_STOCKS, USA_STOCKS, INDIA_INDEXES, USA_INDEXES
 from core.analyzer import analyze_stock
 from core.scanners import (
     sma10_scanner,
@@ -69,6 +70,34 @@ st.set_page_config(
 inject_theme()
 
 # ==========================================================
+# HELPER FOR SIGNAL SORTING
+# ==========================================================
+def sort_by_signal_priority(df):
+    """
+    Enforces a strict categorical order on the dataframe based on Signal priority:
+    Strong Bullish -> Bullish -> Neutral -> Bearish -> Strong Bearish
+    """
+    if df.empty or "Signal" not in df.columns:
+        return df
+        
+    signal_order = [
+        "🔥 Strong Bullish",
+        "✅ Bullish",
+        "➖ Neutral",
+        "⚠️ Bearish",
+        "❌ Strong Bearish"
+    ]
+    
+    # Map any missing exact string matches just in case your code outputs slight variants
+    df['Signal'] = df['Signal'].astype(str)
+    
+    # Create a categorical data type with the explicitly defined order
+    df['Signal'] = pd.Categorical(df['Signal'], categories=signal_order, ordered=True)
+    
+    # Sort by Signal priority tier first, then sort by Score descending inside each tier
+    return df.sort_values(by=["Signal", "Score"], ascending=[True, False]).reset_index(drop=True)
+
+# ==========================================================
 # SIDEBAR (the single control surface)
 # ==========================================================
 
@@ -98,17 +127,15 @@ render_market_status(
     selected_date_label=selected_date_label,
 )
 
-# USA/India date-mismatch notice (set after a run completes — see "RUN
-# ANALYSIS" below). Shown right under the header so it's visible regardless
-# of which tab is active.
+# USA/India date-mismatch notice
 for _note in st.session_state.get("mi_date_notes", []):
     st.info(f"ℹ️ {_note}")
 
 # ==========================================================
-# NAVIGATION (sticky pill tabs — controls live in the sidebar, not here)
+# NAVIGATION (sticky pill tabs)
 # ==========================================================
 
-tab_dashboard, tab_india, tab_usa, tab_sma, tab_ema, tab_signals, tab_sectors, tab_indexes = st.tabs(
+tab_dashboard, tab_india, tab_usa, tab_sma, tab_ema, tab_signals, tab_sectors, tab_ind_indexes, tab_usa_indexes = st.tabs(
     [
         "🏠 Dashboard",
         "🇮🇳 Indian Market",
@@ -118,14 +145,14 @@ tab_dashboard, tab_india, tab_usa, tab_sma, tab_ema, tab_signals, tab_sectors, t
         "🔥 Signals",
         "🏭 Sectors",
         "📊 India Indexes",
+        "🇺🇸 US Indexes",
     ]
 )
 
 run_clicked = controls["run_analysis"]
 
 # ==========================================================
-# RUN ANALYSIS (writes into session_state so every tab can read results
-# on this run AND on subsequent reruns where the user just switches tabs)
+# RUN ANALYSIS
 # ==========================================================
 
 if run_clicked:
@@ -167,10 +194,7 @@ if run_clicked:
     progress_bar.empty()
 
     # ------------------------------------------------------------------
-    # INDIA INDEXES — analyzed separately so they never mix into the
-    # main stock results (SMA scanner, signal buckets, etc).
-    # Uses the same analyze_stock() call with market="INDIA" so all
-    # existing business logic (indicators, scoring, signals) applies.
+    # INDIA INDEXES
     # ------------------------------------------------------------------
     index_results = []
     with st.sidebar:
@@ -188,12 +212,38 @@ if run_clicked:
             sector=idx_info.get("sector", "Index"),
         )
         idx_bar.progress(idx_i / idx_total)
-        idx_label.caption(f"Index: {idx_name}... ({idx_i}/{idx_total})")
+        idx_label.caption(f"India Index: {idx_name}... ({idx_i}/{idx_total})")
         if idx_result is not None:
             index_results.append(idx_result)
 
     idx_label.empty()
     idx_bar.empty()
+
+    # ------------------------------------------------------------------
+    # USA INDEXES
+    # ------------------------------------------------------------------
+    usa_index_results = []
+    with st.sidebar:
+        usa_idx_label = st.empty()
+        usa_idx_bar = st.progress(0)
+
+    usa_idx_total = max(len(USA_INDEXES), 1)
+    for u_idx_i, (u_idx_name, u_idx_info) in enumerate(USA_INDEXES.items(), start=1):
+        u_idx_result = analyze_stock(
+            stock_name=u_idx_name,
+            symbol=u_idx_info["symbol"],
+            market="USA",
+            option=controls["option"],
+            custom_date=controls["custom_date"],
+            sector=u_idx_info.get("sector", "Index"),
+        )
+        usa_idx_bar.progress(u_idx_i / usa_idx_total)
+        usa_idx_label.caption(f"USA Index: {u_idx_name}... ({u_idx_i}/{usa_idx_total})")
+        if u_idx_result is not None:
+            usa_index_results.append(u_idx_result)
+
+    usa_idx_label.empty()
+    usa_idx_bar.empty()
 
     all_results = indian_results + usa_results
 
@@ -207,6 +257,7 @@ if run_clicked:
         "indian_results": indian_results,
         "usa_results": usa_results,
         "index_results": index_results,
+        "usa_index_results": usa_index_results,
         "sma_results": sma_results,
         "ema_above_results": ema_above_results,
         "ema_below_results": ema_below_results,
@@ -221,10 +272,6 @@ if run_clicked:
     }
     st.session_state["mi_last_run_at"] = india_time.strftime("%I:%M:%S %p IST")
 
-    # USA/India date handling fix: detect when the actual candle date Yahoo
-    # Finance returned differs from the calendar date implied by the user's
-    # selection (e.g. US market still on the prior session while it's
-    # already "today" in India) and surface it instead of hiding it.
     india_note = build_date_fallback_note(controls["option"], controls["custom_date"], indian_results, "🇮🇳 India")
     usa_note = build_date_fallback_note(controls["option"], controls["custom_date"], usa_results, "🇺🇸 USA")
     st.session_state["mi_date_notes"] = [n for n in (india_note, usa_note) if n]
@@ -235,7 +282,7 @@ if run_clicked:
     )
 
 # ==========================================================
-# READ LAST RESULTS (persist across reruns / tab switches)
+# READ LAST RESULTS
 # ==========================================================
 
 results = st.session_state.get("mi_results")
@@ -292,8 +339,10 @@ with tab_india:
         results["indian_results"], key="india",
     )
     if not indian_df.empty:
+        # Categorically sort the DataFrame right before giving it to Excel export
+        sorted_indian_df = sort_by_signal_priority(indian_df.copy())
         c1, _ = st.columns([1, 3])
-        render_download_button(c1, "📥 Export India", indian_df, "india_stocks.xlsx", export_india)
+        render_download_button(c1, "📥 Export India", sorted_indian_df, "india_stocks.xlsx", export_india)
 
 # ==========================================================
 # US MARKET TAB
@@ -305,8 +354,10 @@ with tab_usa:
         results["usa_results"], key="usa",
     )
     if not usa_df.empty:
+        # Categorically sort the DataFrame right before giving it to Excel export
+        sorted_usa_df = sort_by_signal_priority(usa_df.copy())
         c1, _ = st.columns([1, 3])
-        render_download_button(c1, "📥 Export USA", usa_df, "usa_stocks.xlsx", export_usa)
+        render_download_button(c1, "📥 Export USA", sorted_usa_df, "usa_stocks.xlsx", export_usa)
 
 # ==========================================================
 # SMA10 SCANNER TAB
@@ -414,18 +465,19 @@ with tab_signals:
         file_name = "bearish_stocks.xlsx"
 
     if not bucket_df.empty:
+        # Enforce signal ranking within exported specific view buckets too
+        sorted_bucket_df = sort_by_signal_priority(bucket_df.copy())
         c1, _ = st.columns([1, 3])
-        render_download_button(c1, "📥 Export Bucket", bucket_df, file_name, export_scanner)
+        render_download_button(c1, "📥 Export Bucket", sorted_bucket_df, file_name, export_scanner)
 
 # ==========================================================
-# SECTORS TAB  — purely additive, zero existing logic changed
+# SECTORS TAB
 # ==========================================================
 
 with tab_sectors:
     render_section_header(
         "🏭", "Sector Analysis",
-        "Stocks grouped by sector — coupled to config/stocks_config.py, "
-        "add a stock there and it appears here automatically",
+        "Stocks grouped by sector — coupled to config/stocks_config.py",
     )
 
     if not results:
@@ -444,7 +496,6 @@ with tab_sectors:
         if not sectors:
             st.caption("No sector data found — make sure stocks in config/stocks_config.py have a 'sector' key.")
         else:
-            # ── Summary chip row ──────────────────────────────────────
             chip_parts = []
             for sec_name, sec_stocks in sectors.items():
                 bullish_n = sum(1 for r in sec_stocks if r["Signal"] in ("🔥 Strong Bullish", "✅ Bullish"))
@@ -467,7 +518,6 @@ with tab_sectors:
                 f'{"".join(chip_parts)}</div>',
             )
 
-            # ── One expander per sector ───────────────────────────────
             for sec_name, sec_stocks in sectors.items():
                 bullish_n = sum(1 for r in sec_stocks if r["Signal"] in ("🔥 Strong Bullish", "✅ Bullish"))
                 bearish_n = sum(1 for r in sec_stocks if r["Signal"] in ("⚠️ Bearish", "❌ Strong Bearish"))
@@ -479,7 +529,6 @@ with tab_sectors:
                 )
                 with st.expander(label, expanded=False):
                     sec_df = to_dataframe(sec_stocks)
-                    # re-use the shared searchable table with unique key per sector
                     from ui.tables import to_display_view
                     from ui.components import render_searchable_table
                     render_searchable_table(
@@ -492,10 +541,10 @@ with tab_sectors:
                     )
 
 # ==========================================================
-# INDIA INDEXES TAB  — purely additive, zero existing logic changed
+# INDIA INDEXES TAB
 # ==========================================================
 
-with tab_indexes:
+with tab_ind_indexes:
     render_section_header(
         "📊", "India Indexes",
         "NSE broad-market and sectoral indices — same SMA/EMA/RSI scoring as stocks",
@@ -525,7 +574,7 @@ with tab_indexes:
                 idx_results, key="indexes",
                 default_sort="Score", default_ascending=False,
             )
-            # ── Signal summary mini-cards ─────────────────────────────
+            
             idx_bull = sum(1 for r in idx_results if r["Signal"] in ("🔥 Strong Bullish", "✅ Bullish"))
             idx_neu  = sum(1 for r in idx_results if r["Signal"] == "➖ Neutral")
             idx_bear = sum(1 for r in idx_results if r["Signal"] in ("⚠️ Bearish", "❌ Strong Bearish"))
@@ -549,8 +598,73 @@ with tab_indexes:
                 </div>""",
             )
             if not idx_df.empty:
+                # Also sort index sheets categorically by signal
+                sorted_idx_df = sort_by_signal_priority(idx_df.copy())
                 c1, _ = st.columns([1, 3])
-                render_download_button(c1, "📥 Export Indexes", idx_df, "india_indexes.xlsx", export_scanner)
+                render_download_button(c1, "📥 Export Indexes", sorted_idx_df, "india_indexes.xlsx", export_scanner)
+
+# ==========================================================
+# US INDEXES TAB
+# ==========================================================
+
+with tab_usa_indexes:
+    render_section_header(
+        "🇺🇸", "US Indexes",
+        "US major indices and key market-sector ETFs — same SMA/EMA/RSI scoring as stocks",
+    )
+
+    if not results:
+        render_html(
+            f"""<div class="mi-glass mi-fade-in" style="padding:32px 20px; text-align:center;">
+            <div style="font-size:1.8rem;">🇺🇸</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; color:{COLORS['text']}; margin-top:6px;">
+            Run a scan first</div>
+            <div style="color:{COLORS['muted']}; font-size:0.83rem; margin-top:4px;">
+            US index data is fetched alongside the main scan.</div>
+            </div>""",
+        )
+    else:
+        usa_idx_results = results.get("usa_index_results", [])
+        if not usa_idx_results:
+            render_html(
+                f"""<div class="mi-glass" style="padding:24px; text-align:center; color:{COLORS['muted']};">
+                No US index data available. Yahoo Finance may not have returned data for some symbols.</div>""",
+            )
+        else:
+            usa_idx_df = render_results_section(
+                "🇺🇸", "US Indices Analysis",
+                f"{len(usa_idx_results)} of {len(USA_INDEXES)} indices fetched successfully",
+                usa_idx_results, key="usa_indexes",
+                default_sort="Score", default_ascending=False,
+            )
+            
+            u_idx_bull = sum(1 for r in usa_idx_results if r["Signal"] in ("🔥 Strong Bullish", "✅ Bullish"))
+            u_idx_neu  = sum(1 for r in usa_idx_results if r["Signal"] == "➖ Neutral")
+            u_idx_bear = sum(1 for r in usa_idx_results if r["Signal"] in ("⚠️ Bearish", "❌ Strong Bearish"))
+            render_html(
+                f"""<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+                <div style="flex:1;min-width:130px;background:{COLORS['panel']};border:1px solid {COLORS['green']}44;
+                border-left:3px solid {COLORS['green']};border-radius:10px;padding:12px 14px;">
+                <div style="color:{COLORS['muted']};font-size:0.7rem;text-transform:uppercase;">Bullish US Indices</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:{COLORS['green']};">{u_idx_bull}</div></div>
+                <div style="flex:1;min-width:130px;background:{COLORS['panel']};border:1px solid {COLORS['amber']}44;
+                border-left:3px solid {COLORS['amber']};border-radius:10px;padding:12px 14px;">
+                <div style="color:{COLORS['muted']};font-size:0.7rem;text-transform:uppercase;">Neutral US Indices</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:{COLORS['amber']};">{u_idx_neu}</div></div>
+                <div style="flex:1;min-width:130px;background:{COLORS['panel']};border:1px solid {COLORS['red']}44;
+                border-left:3px solid {COLORS['red']};border-radius:10px;padding:12px 14px;">
+                <div style="color:{COLORS['muted']};font-size:0.7rem;text-transform:uppercase;">Bearish US Indices</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;
+                color:{COLORS['red']};">{u_idx_bear}</div></div>
+                </div>""",
+            )
+            if not usa_idx_df.empty:
+                # Also sort US index sheets categorically by signal
+                sorted_usa_idx_df = sort_by_signal_priority(usa_idx_df.copy())
+                c1, _ = st.columns([1, 3])
+                render_download_button(c1, "📥 Export US Indexes", sorted_usa_idx_df, "usa_indexes.xlsx", export_scanner)
 
 # ==========================================================
 # END
