@@ -30,6 +30,7 @@ That's it — no other file needs to change.
 """
 
 INDIAN_STOCKS = {
+    # Original Stocks
     "M&M": {"symbol": "M&M.NS", "sector": "Automobile"},
     "Hero Motocorp": {"symbol": "HEROMOTOCO.NS", "sector": "Automobile"},
     "KPIT Technology": {"symbol": "KPITTECH.NS", "sector": "IT"},
@@ -71,6 +72,31 @@ INDIAN_STOCKS = {
     "Lupin": {"symbol": "LUPIN.NS", "sector": "Pharma"},
     "Laurus Labs": {"symbol": "LAURUSLABS.NS", "sector": "Pharma"},
     "NIFTY 50": {"symbol": "^NSEI", "sector": "Index"},
+
+    # Newly Added Stocks
+    "PFC": {"symbol": "PFC.NS", "sector": "Finance"},
+    "REC": {"symbol": "RECLTD.NS", "sector": "Finance"},
+    "Force Motors": {"symbol": "FORCEMOT.NS", "sector": "Automobile"},
+    "Oil India": {"symbol": "OIL.NS", "sector": "Energy"},
+    "Coforge": {"symbol": "COFORGE.NS", "sector": "IT"},
+    "Tech Mahindra": {"symbol": "TECHM.NS", "sector": "IT"},
+    "HCL Tech": {"symbol": "HCLTECH.NS", "sector": "IT"},
+    "CDSL": {"symbol": "CDSL.NS", "sector": "Finance"},
+    "Mankind Pharma": {"symbol": "MANKIND.NS", "sector": "Pharma"},
+    "Voltas": {"symbol": "VOLTAS.NS", "sector": "Consumer Electronics"},
+    "Power India": {"symbol": "POWERINDIA.NS", "sector": "Capital Goods"},
+    "Titan": {"symbol": "TITAN.NS", "sector": "Consumer Discretionary"},
+    "Kalyan Jewellers": {"symbol": "KALYANKJIL.NS", "sector": "Consumer Discretionary"},
+    "ONGC": {"symbol": "ONGC.NS", "sector": "Energy"},
+    "BPCL": {"symbol": "BPCL.NS", "sector": "Energy"},
+    "Suzlon": {"symbol": "SUZLON.NS", "sector": "Energy"},
+    "ITC": {"symbol": "ITC.NS", "sector": "FMCG"},
+    "Britannia": {"symbol": "BRITANNIA.NS", "sector": "FMCG"},
+    "Premier Energies": {"symbol": "PREMIERENE.NS", "sector": "Energy"},
+    "Glenmark Pharma": {"symbol": "GLENMARK.NS", "sector": "Pharma"},
+    "Nestle India": {"symbol": "NESTLEIND.NS", "sector": "FMCG"},
+    "Godrej Properties": {"symbol": "GODREJPROP.NS", "sector": "Realty"},
+    "Apollo Hospitals": {"symbol": "APOLLOHOSP.NS", "sector": "Healthcare"},
 }
 
 USA_STOCKS = {
@@ -119,6 +145,7 @@ USA_STOCKS = {
 # ======================================================================
 
 INDIA_INDEXES = {
+    # Original Indexes
     "Nifty 50":           {"symbol": "^NSEI",       "sector": "Broad Market"},
     "Bank Nifty":         {"symbol": "^NSEBANK",    "sector": "Banking"},
     "Nifty IT":           {"symbol": "^CNXIT",      "sector": "IT"},
@@ -129,8 +156,14 @@ INDIA_INDEXES = {
     "Nifty Infra":        {"symbol": "^CNXINFRA",   "sector": "Infrastructure"},
     "Nifty Realty":       {"symbol": "^CNXREALTY",  "sector": "Realty"},
     "Nifty Energy":       {"symbol": "^CNXENERGY",  "sector": "Energy"},
-    "Nifty FMCG":         {"symbol": "^CNXFMCG",   "sector": "FMCG"},
+    "Nifty FMCG":         {"symbol": "^CNXFMCG",    "sector": "FMCG"},
     "Nifty Defence":      {"symbol": "^CNXDEFENCE", "sector": "Defence"},
+    
+    # Newly Added Indexes
+    "Nifty Oil and Gas":  {"symbol": "^CNXOILGAS",  "sector": "Energy"},
+    "Nifty Fin Service":  {"symbol": "^CNXFIN",     "sector": "Finance"},
+    "Nifty Ind Defence":  {"symbol": "^CNXDEFENCE", "sector": "Defence"},
+    "Nifty Chemicals":    {"symbol": "^CNXCHEMICALS","sector": "Chemicals"},
 }
 
 USA_INDEXES = {
