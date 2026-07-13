@@ -144,8 +144,9 @@ USA_STOCKS = {
 # through without appending .NS).
 # ======================================================================
 
+
 INDIA_INDEXES = {
-    # Original Indexes
+    # Your existing working indexes
     "Nifty 50":           {"symbol": "^NSEI",       "sector": "Broad Market"},
     "Bank Nifty":         {"symbol": "^NSEBANK",    "sector": "Banking"},
     "Nifty IT":           {"symbol": "^CNXIT",      "sector": "IT"},
@@ -157,13 +158,10 @@ INDIA_INDEXES = {
     "Nifty Realty":       {"symbol": "^CNXREALTY",  "sector": "Realty"},
     "Nifty Energy":       {"symbol": "^CNXENERGY",  "sector": "Energy"},
     "Nifty FMCG":         {"symbol": "^CNXFMCG",    "sector": "FMCG"},
-    "Nifty Defence":      {"symbol": "^CNXDEFENCE", "sector": "Defence"},
     
-    # Newly Added Indexes
-    "Nifty Oil and Gas":  {"symbol": "^CNXOILGAS",  "sector": "Energy"},
-    "Nifty Fin Service":  {"symbol": "^CNXFIN",     "sector": "Finance"},
-    "Nifty Ind Defence":  {"symbol": "^CNXDEFENCE", "sector": "Defence"},
-    "Nifty Chemicals":    {"symbol": "^CNXCHEMICALS","sector": "Chemicals"},
+    # Your newly added custom nselib indexes
+    "Nifty Oil and Gas":  {"symbol": "NSE:NIFTY OIL & GAS",     "sector": "Energy"},
+    "Nifty Ind Defence":  {"symbol": "NSE:NIFTY INDIA DEFENCE", "sector": "Defence"},
 }
 
 USA_INDEXES = {
