@@ -3,15 +3,16 @@ services/yahoo_service.py
 
 Purpose
 -------
-The single point of contact with yfinance. Owns the st.cache_data
-decorator (cache duration driven by config/settings.CACHE_TIME), and
-guarantees callers never see a raised exception — failures come back as
+The single point of contact with yfinance (and nselib for unsupported NSE indices). 
+Owns the st.cache_data decorator (cache duration driven by config/settings.CACHE_TIME), 
+and guarantees callers never see a raised exception — failures come back as
 an empty DataFrame plus a logged error, exactly like the original app's
 broad try/except.
 
 Inputs
 ------
 ticker: str   - a fully-qualified Yahoo Finance ticker (e.g. "TCS.NS", "AAPL", "^NSEI")
+                OR an NSE pseudo-ticker (e.g., "NSE:NIFTY OIL AND GAS")
 period: str   - yfinance period string, defaults to settings.YAHOO_PERIOD
 interval: str - yfinance interval string, defaults to settings.YAHOO_INTERVAL
 
@@ -28,6 +29,10 @@ yfinance directly — this keeps the network/caching concern in one place.
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+from datetime import datetime, timedelta
+
+# Requires: pip install nselib
+from nselib import capital_market 
 
 from config.settings import CACHE_TIME, YAHOO_PERIOD, YAHOO_INTERVAL
 from utils.helpers import get_logger
@@ -35,15 +40,78 @@ from utils.helpers import get_logger
 logger = get_logger(__name__)
 
 
+def _get_nse_dates(period: str) -> tuple[str, str]:
+    """Converts yfinance period strings into nselib DD-MM-YYYY date formats."""
+    end_date = datetime.now()
+    
+    # Map common yfinance periods to days
+    period_map = {
+        '1mo': 30, '3mo': 90, '6mo': 180, 
+        '1y': 365, '2y': 730, '5y': 1825
+    }
+    days = period_map.get(period, 180) # Default to 6 months
+    
+    start_date = end_date - timedelta(days=days)
+    
+    return start_date.strftime("%d-%m-%Y"), end_date.strftime("%d-%m-%Y")
+
+
+def _fetch_from_nse(index_name: str, period: str) -> pd.DataFrame:
+    """Fallback fetcher using nselib for unsupported NSE thematic indices."""
+    try:
+        from_date, to_date = _get_nse_dates(period)
+        
+        # Fetch directly from NSE
+        df = capital_market.index_data(index=index_name, from_date=from_date, to_date=to_date)
+        
+        if df is None or df.empty:
+            return pd.DataFrame()
+            
+        # Clean and format to perfectly match yfinance's structure
+        df['Date'] = pd.to_datetime(df['HistoricalDate'])
+        df.set_index('Date', inplace=True)
+        
+        # Strip commas from numbers and convert to float
+        for col in ['OPEN', 'HIGH', 'LOW', 'CLOSE']:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+                
+        df.rename(columns={
+            'OPEN': 'Open',
+            'HIGH': 'High',
+            'LOW': 'Low',
+            'CLOSE': 'Close',
+        }, inplace=True)
+        
+        # nselib indices lack volume data, pad with 0s to prevent KeyError in UI charts
+        df['Volume'] = 0 
+        
+        # Sort chronologically (nselib sometimes returns newest first)
+        df = df.sort_index()
+        
+        return df[['Open', 'High', 'Low', 'Close', 'Volume']]
+        
+    except Exception as exc:
+        logger.error("NSE fetch failed for index=%s: %s", index_name, exc)
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=CACHE_TIME)
 def fetch_ohlc(ticker: str, period: str = YAHOO_PERIOD, interval: str = YAHOO_INTERVAL) -> pd.DataFrame:
     """
     Download daily OHLC candles for a single ticker. Never raises —
     returns an empty DataFrame on any failure so callers can simply check
-    `.empty`.
+    `.empty`. Routes "NSE:..." tickers to nselib directly.
     """
     try:
-        data = yf.download(ticker, period=period, interval=interval, progress=False)
+        # Route specific thematic indices to nselib
+        if ticker.startswith("NSE:"):
+            nse_index = ticker.replace("NSE:", "")
+            data = _fetch_from_nse(nse_index, period)
+            
+        # Default routing to yfinance
+        else:
+            data = yf.download(ticker, period=period, interval=interval, progress=False)
 
         if data is None or data.empty:
             logger.warning("No data returned for ticker=%s", ticker)
