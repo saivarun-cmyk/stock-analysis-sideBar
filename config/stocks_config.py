@@ -34,7 +34,7 @@ INDIAN_STOCKS = {
     "M&M": {"symbol": "M&M.NS", "sector": "Automobile"},
     "Hero Motocorp": {"symbol": "HEROMOTOCO.NS", "sector": "Automobile"},
     "KPIT Technology": {"symbol": "KPITTECH.NS", "sector": "IT"},
-    "LTM": {"symbol": "LTIM.NS", "sector": "IT"},
+    "LTM": {"symbol": "LTM.NS", "sector": "IT"},
     "Mphasis": {"symbol": "MPHASIS.NS", "sector": "IT"},
     "Maruti": {"symbol": "MARUTI.NS", "sector": "Automobile"},
     "DLF": {"symbol": "DLF.NS", "sector": "Realty"},
