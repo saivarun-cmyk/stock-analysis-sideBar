@@ -142,6 +142,12 @@ USA_STOCKS = {
 # file needs to change.  Symbols are Yahoo Finance index tickers (all
 # start with ^, so core/data_fetcher.build_ticker passes them straight
 # through without appending .NS).
+#
+# A handful of newer NSE thematic indices are NOT on Yahoo Finance at
+# all (Yahoo only has the underlying ETFs that track them, not the raw
+# index). For those, the "symbol" uses the "NSE:<INDEX NAME>" format,
+# which core/data_fetcher.py should route to the nselib fallback instead
+# of Yahoo — same pattern already used for "Nifty Ind Defence" below.
 # ======================================================================
 
 
@@ -158,10 +164,25 @@ INDIA_INDEXES = {
     "Nifty Realty":       {"symbol": "^CNXREALTY",  "sector": "Realty"},
     "Nifty Energy":       {"symbol": "^CNXENERGY",  "sector": "Energy"},
     "Nifty FMCG":         {"symbol": "^CNXFMCG",    "sector": "FMCG"},
-    
+
     # Your newly added custom nselib indexes
     "Nifty Oil and Gas":  {"symbol": "NSE:NIFTY OIL & GAS",     "sector": "Energy"},
     "Nifty Ind Defence":  {"symbol": "NSE:NIFTY INDIA DEFENCE", "sector": "Defence"},
+
+    # ------------------------------------------------------------------
+    # Thematic radar (added per request)
+    # ------------------------------------------------------------------
+    # These three ARE on Yahoo Finance under their own .NS index tickers.
+    "Nifty Capital Markets":       {"symbol": "NIFTY_CAPITAL_MKT.NS", "sector": "Finance"},
+    "Nifty India Digital":         {"symbol": "NIFTY_IND_DIGITAL.NS", "sector": "Digital Economy"},
+    "Nifty India Manufacturing":   {"symbol": "NIFTY_INDIA_MFG.NS",   "sector": "Manufacturing"},
+
+    # These are NOT on Yahoo Finance (no raw index ticker exists there yet) —
+    # use the nselib fallback format, same as "Nifty Ind Defence" above.
+    "Nifty India Internet":                {"symbol": "NSE:NIFTY INDIA INTERNET",                  "sector": "Internet/Digital"},
+    "Nifty EV & New Age Automotive":       {"symbol": "NSE:NIFTY EV & NEW AGE AUTOMOTIVE",          "sector": "EV/Automobile"},
+    "Nifty India Infrastructure & Logistics": {"symbol": "NSE:NIFTY INDIA INFRASTRUCTURE AND LOGISTICS", "sector": "Infrastructure"},
+    "Nifty India New Age Consumption":     {"symbol": "NSE:NIFTY INDIA NEW AGE CONSUMPTION",        "sector": "Consumption"},
 }
 
 USA_INDEXES = {
@@ -178,4 +199,20 @@ USA_INDEXES = {
     "Energy":         {"symbol": "XLE",   "sector": "Energy"},
     "Communication":  {"symbol": "XLC",   "sector": "Communication Services"},
     "Materials":      {"symbol": "XLB",   "sector": "Materials"},
+
+    # ------------------------------------------------------------------
+    # US THEMATIC (added per request) — all confirmed on Yahoo Finance,
+    # no suffix needed since they're plain NYSE/Nasdaq-listed ETFs.
+    # ------------------------------------------------------------------
+    "Internet":            {"symbol": "FDN",  "sector": "Internet"},
+    "FinTech":              {"symbol": "FINX", "sector": "FinTech"},
+    "Artificial Intelligence": {"symbol": "AIQ", "sector": "Artificial Intelligence"},
+    "Cybersecurity":        {"symbol": "CIBR", "sector": "Cybersecurity"},
+    "Cloud Computing":      {"symbol": "SKYY", "sector": "Cloud Computing"},
+    "Aerospace & Defence":  {"symbol": "ITA",  "sector": "Aerospace & Defence"},
+    "Infrastructure":       {"symbol": "PAVE", "sector": "Infrastructure"},
+    "Uranium & Nuclear":    {"symbol": "URA",  "sector": "Uranium/Nuclear"},
+    "Biotechnology":        {"symbol": "XBI",  "sector": "Biotechnology"},
+    # Note: SMH (semiconductors) intentionally skipped — you already have
+    # SOXX above and the ChatGPT thread flagged them as redundant.
 }
