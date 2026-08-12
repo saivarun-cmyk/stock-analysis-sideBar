@@ -67,20 +67,27 @@ def _fetch_from_nse(index_name: str, period: str) -> pd.DataFrame:
         if df is None or df.empty:
             return pd.DataFrame()
             
-        # Clean and format to perfectly match yfinance's structure
-        df['Date'] = pd.to_datetime(df['HistoricalDate'])
+        # Clean and format to perfectly match yfinance's structure.
+        # NOTE: nselib's capital_market.index_data() actually returns columns
+        # ['INDEX_NAME', 'OPEN_INDEX_VAL', 'HIGH_INDEX_VAL', 'CLOSE_INDEX_VAL',
+        #  'LOW_INDEX_VAL', 'TURN_OVER', 'TRADED_QTY', 'TIMESTAMP'] -- there is
+        # no 'HistoricalDate'/'OPEN'/'HIGH'/'LOW'/'CLOSE'. Using the wrong
+        # names silently raised a KeyError that was swallowed by the except
+        # block below, so every NSE: index came back empty. dayfirst=True
+        # since NSE's TIMESTAMP is "DD-Mon-YYYY".
+        df['Date'] = pd.to_datetime(df['TIMESTAMP'], dayfirst=True, errors='coerce')
         df.set_index('Date', inplace=True)
         
         # Strip commas from numbers and convert to float
-        for col in ['OPEN', 'HIGH', 'LOW', 'CLOSE']:
+        for col in ['OPEN_INDEX_VAL', 'HIGH_INDEX_VAL', 'LOW_INDEX_VAL', 'CLOSE_INDEX_VAL']:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.replace(',', '').astype(float)
                 
         df.rename(columns={
-            'OPEN': 'Open',
-            'HIGH': 'High',
-            'LOW': 'Low',
-            'CLOSE': 'Close',
+            'OPEN_INDEX_VAL': 'Open',
+            'HIGH_INDEX_VAL': 'High',
+            'LOW_INDEX_VAL': 'Low',
+            'CLOSE_INDEX_VAL': 'Close',
         }, inplace=True)
         
         # nselib indices lack volume data, pad with 0s to prevent KeyError in UI charts
