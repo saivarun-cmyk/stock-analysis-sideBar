@@ -44,7 +44,7 @@ def build_ticker(symbol: str, market: str) -> str:
     Mirrors the original app's suffixing rule for INDIA market.
     """
     if market == "INDIA":
-        if symbol.startswith("^") or symbol.endswith(".NS"):
+        if symbol.startswith("^") or symbol.startswith("NSE:") or symbol.endswith(".NS"):
             return symbol
         return f"{symbol}.NS"
     return symbol
