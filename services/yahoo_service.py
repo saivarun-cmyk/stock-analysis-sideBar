@@ -26,6 +26,8 @@ Called exclusively by core/data_fetcher.py. No other module should import
 yfinance directly — this keeps the network/caching concern in one place.
 """
 
+import time
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -149,7 +151,23 @@ def fetch_ohlc(ticker: str, period: str = YAHOO_PERIOD, interval: str = YAHOO_IN
             
         # Default routing to yfinance
         else:
-            data = yf.download(ticker, period=period, interval=interval, progress=False)
+            # 138 tickers get fetched sequentially every run (64 India stocks +
+            # 32 USA stocks + 20 India indexes + 22 USA indexes). Yahoo
+            # increasingly rate-limits bursts of requests from shared/
+            # datacenter IPs (which is what Streamlit Cloud looks like to
+            # them) -- this shows up as a DIFFERENT, previously-fine ticker
+            # returning empty on each run, not a permanently broken ticker.
+            # A short retry-with-backoff absorbs most of these transient
+            # blips without needing to restructure the fetch loop into
+            # batched multi-ticker calls.
+            data = None
+            for attempt in range(3):
+                data = yf.download(ticker, period=period, interval=interval, progress=False)
+                if data is not None and not data.empty:
+                    break
+                if attempt < 2:
+                    logger.warning("Empty response for ticker=%s (attempt %d/3), retrying...", ticker, attempt + 1)
+                    time.sleep(1.5 * (attempt + 1))  # 1.5s, then 3s
 
         if data is None or data.empty:
             logger.warning("No data returned for ticker=%s", ticker)
