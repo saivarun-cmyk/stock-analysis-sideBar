@@ -166,23 +166,27 @@ INDIA_INDEXES = {
     "Nifty FMCG":         {"symbol": "^CNXFMCG",    "sector": "FMCG"},
 
     # Your newly added custom nselib indexes
-    "Nifty Oil and Gas":  {"symbol": "NSE:NIFTY OIL & GAS",     "sector": "Energy"},
+    # NOTE: "OIL & GAS" corrected to "OIL AND GAS" -- nselib's own registered
+    # index name (see nselib/indices/nse_config.py -> NiftySectoralIndices)
+    # is "Nifty Oil and Gas". The "&" variant was silently failing.
+    "Nifty Oil and Gas":  {"symbol": "NSE:NIFTY OIL AND GAS",   "sector": "Energy"},
     "Nifty Ind Defence":  {"symbol": "NSE:NIFTY INDIA DEFENCE", "sector": "Defence"},
 
     # ------------------------------------------------------------------
     # Thematic radar (added per request)
     # ------------------------------------------------------------------
-    # These three ARE on Yahoo Finance under their own .NS index tickers.
-    "Nifty Capital Markets":       {"symbol": "NIFTY_CAPITAL_MKT.NS", "sector": "Finance"},
-    "Nifty India Digital":         {"symbol": "NIFTY_IND_DIGITAL.NS", "sector": "Digital Economy"},
-    "Nifty India Manufacturing":   {"symbol": "NIFTY_INDIA_MFG.NS",   "sector": "Manufacturing"},
-
-    # These are NOT on Yahoo Finance (no raw index ticker exists there yet) —
-    # use the nselib fallback format, same as "Nifty Ind Defence" above.
-    "Nifty India Internet":                {"symbol": "NSE:NIFTY INDIA INTERNET",                  "sector": "Internet/Digital"},
-    "Nifty EV & New Age Automotive":       {"symbol": "NSE:NIFTY EV & NEW AGE AUTOMOTIVE",          "sector": "EV/Automobile"},
-    "Nifty India Infrastructure & Logistics": {"symbol": "NSE:NIFTY INDIA INFRASTRUCTURE AND LOGISTICS", "sector": "Infrastructure"},
-    "Nifty India New Age Consumption":     {"symbol": "NSE:NIFTY INDIA NEW AGE CONSUMPTION",        "sector": "Consumption"},
+    # All seven route through the nselib fallback ("NSE:" prefix), not Yahoo.
+    # These exact strings are copied verbatim from nselib's own registered
+    # index list (nselib/indices/nse_config.py -> NiftyThematicIndices),
+    # which is the same list its historical-data endpoint recognizes --
+    # safer than guessing an unverified Yahoo Finance .NS index ticker.
+    "Nifty Capital Markets":                  {"symbol": "NSE:NIFTY CAPITAL MARKETS",                  "sector": "Finance"},
+    "Nifty India Digital":                    {"symbol": "NSE:NIFTY INDIA DIGITAL",                    "sector": "Digital Economy"},
+    "Nifty India Manufacturing":               {"symbol": "NSE:NIFTY INDIA MANUFACTURING",              "sector": "Manufacturing"},
+    "Nifty India Internet":                    {"symbol": "NSE:NIFTY INDIA INTERNET",                   "sector": "Internet/Digital"},
+    "Nifty EV & New Age Automotive":           {"symbol": "NSE:NIFTY EV & NEW AGE AUTOMOTIVE",          "sector": "EV/Automobile"},
+    "Nifty India Infrastructure & Logistics":  {"symbol": "NSE:NIFTY INDIA INFRASTRUCTURE & LOGISTICS", "sector": "Infrastructure"},
+    "Nifty India New Age Consumption":         {"symbol": "NSE:NIFTY INDIA NEW AGE CONSUMPTION",        "sector": "Consumption"},
 }
 
 USA_INDEXES = {
