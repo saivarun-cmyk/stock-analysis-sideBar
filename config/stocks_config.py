@@ -165,26 +165,40 @@ INDIA_INDEXES = {
     "Nifty Energy":       {"symbol": "^CNXENERGY",  "sector": "Energy"},
     "Nifty FMCG":         {"symbol": "^CNXFMCG",    "sector": "FMCG"},
 
-    # Your newly added custom nselib indexes
-    # NOTE: "OIL & GAS" corrected to "OIL AND GAS" -- nselib's own registered
-    # index name (see nselib/indices/nse_config.py -> NiftySectoralIndices)
-    # is "Nifty Oil and Gas". The "&" variant was silently failing.
-    "Nifty Oil and Gas":  {"symbol": "NSE:NIFTY OIL AND GAS",   "sector": "Energy"},
-    "Nifty Ind Defence":  {"symbol": "NSE:NIFTY INDIA DEFENCE", "sector": "Defence"},
+    # Your newly added custom nselib indexes.
+    # NOTE: nseindia.com aggressively blocks requests from cloud-hosted apps
+    # (Streamlit Cloud etc.) -- the NSE: fallback can silently return no data
+    # for reasons entirely outside this code (see comment block below).
+    # "Nifty Oil and Gas" IS available directly on Yahoo Finance under its
+    # own raw index ticker, so it no longer needs the NSE: fallback at all.
+    "Nifty Oil and Gas":  {"symbol": "NIFTY_OIL_AND_GAS.NS", "sector": "Energy"},
+    # "Nifty India Defence" has no raw index ticker on Yahoo -- using the
+    # Motilal Oswal ETF that tracks it as a reliable proxy instead. This
+    # tracks the index closely but is NOT the exact index level (ETF price,
+    # not index points) -- fine for trend/signal purposes, not exact levels.
+    "Nifty Ind Defence":  {"symbol": "MODEFENCE.NS", "sector": "Defence"},
 
     # ------------------------------------------------------------------
     # Thematic radar (added per request)
     # ------------------------------------------------------------------
-    # All seven route through the nselib fallback ("NSE:" prefix), not Yahoo.
-    # These exact strings are copied verbatim from nselib's own registered
-    # index list (nselib/indices/nse_config.py -> NiftyThematicIndices),
-    # which is the same list its historical-data endpoint recognizes --
-    # safer than guessing an unverified Yahoo Finance .NS index ticker.
-    "Nifty Capital Markets":                  {"symbol": "NSE:NIFTY CAPITAL MARKETS",                  "sector": "Finance"},
-    "Nifty India Digital":                    {"symbol": "NSE:NIFTY INDIA DIGITAL",                    "sector": "Digital Economy"},
-    "Nifty India Manufacturing":               {"symbol": "NSE:NIFTY INDIA MANUFACTURING",              "sector": "Manufacturing"},
+    # These four ARE on Yahoo Finance under their own raw .NS index tickers
+    # (confirmed via Yahoo Finance's own historical-data pages) -- far more
+    # reliable than scraping nseindia.com from a cloud host.
+    "Nifty Capital Markets":       {"symbol": "NIFTY_CAPITAL_MKT.NS", "sector": "Finance"},
+    "Nifty India Digital":         {"symbol": "NIFTY_IND_DIGITAL.NS", "sector": "Digital Economy"},
+    "Nifty India Manufacturing":   {"symbol": "NIFTY_INDIA_MFG.NS",   "sector": "Manufacturing"},
+    # No raw Yahoo index ticker exists for "Nifty EV & New Age Automotive" --
+    # using the Mirae Asset ETF that tracks it (same proxy caveat as above).
+    "Nifty EV & New Age Automotive": {"symbol": "EVINDIA.NS", "sector": "EV/Automobile"},
+
+    # These three have NEITHER a raw Yahoo index ticker NOR a confirmed
+    # tracking ETF on Yahoo yet (all are recently-launched NSE thematic
+    # indices, June 2025 or later) -- they stay on the nselib "NSE:" fallback.
+    # If they still come back empty after the & -> %26 encoding fix, that's
+    # nseindia.com blocking the request at the network level, not a bug here
+    # -- check the app logs for "NSE fetch failed" / "NSE fetch returned no
+    # rows" to confirm before assuming it's fixable in code.
     "Nifty India Internet":                    {"symbol": "NSE:NIFTY INDIA INTERNET",                   "sector": "Internet/Digital"},
-    "Nifty EV & New Age Automotive":           {"symbol": "NSE:NIFTY EV & NEW AGE AUTOMOTIVE",          "sector": "EV/Automobile"},
     "Nifty India Infrastructure & Logistics":  {"symbol": "NSE:NIFTY INDIA INFRASTRUCTURE & LOGISTICS", "sector": "Infrastructure"},
     "Nifty India New Age Consumption":         {"symbol": "NSE:NIFTY INDIA NEW AGE CONSUMPTION",        "sector": "Consumption"},
 }
