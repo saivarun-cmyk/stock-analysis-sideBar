@@ -60,11 +60,24 @@ def _fetch_from_nse(index_name: str, period: str) -> pd.DataFrame:
     """Fallback fetcher using nselib for unsupported NSE thematic indices."""
     try:
         from_date, to_date = _get_nse_dates(period)
-        
+
+        # Work around a bug in nselib.capital_market.get_index_data(): it does
+        # index.replace(" ", "%20") but never encodes "&", so any index whose
+        # real NSE name contains "&" (e.g. "Nifty EV & New Age Automotive")
+        # breaks the query string -- the "&" is read as a new query param
+        # delimiter and NSE silently returns nothing for the truncated name.
+        # nselib has a cleaning_nse_symbol() helper elsewhere that does this
+        # exact "&" -> "%26" substitution for stock symbols like "M&M", but
+        # it's never applied inside get_index_data(). Pre-encoding it here is
+        # safe either way: get_index_data()'s own .replace(" ", "%20").upper()
+        # leaves an existing "%26" untouched.
+        safe_index_name = index_name.replace("&", "%26")
+
         # Fetch directly from NSE
-        df = capital_market.index_data(index=index_name, from_date=from_date, to_date=to_date)
+        df = capital_market.index_data(index=safe_index_name, from_date=from_date, to_date=to_date)
         
         if df is None or df.empty:
+            logger.warning("NSE fetch returned no rows for index=%s (encoded=%s)", index_name, safe_index_name)
             return pd.DataFrame()
             
         # Clean and format to perfectly match yfinance's structure.
@@ -99,7 +112,7 @@ def _fetch_from_nse(index_name: str, period: str) -> pd.DataFrame:
         return df[['Open', 'High', 'Low', 'Close', 'Volume']]
         
     except Exception as exc:
-        logger.error("NSE fetch failed for index=%s: %s", index_name, exc)
+        logger.error("NSE fetch failed for index=%s: %s: %s", index_name, type(exc).__name__, exc, exc_info=True)
         return pd.DataFrame()
 
 
