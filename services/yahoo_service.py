@@ -89,6 +89,24 @@ def _fetch_from_nse(index_name: str, period: str) -> pd.DataFrame:
         # block below, so every NSE: index came back empty. dayfirst=True
         # since NSE's TIMESTAMP is "DD-Mon-YYYY".
         df['Date'] = pd.to_datetime(df['TIMESTAMP'], dayfirst=True, errors='coerce')
+
+        # CRITICAL: any row whose TIMESTAMP failed to parse becomes NaT, and
+        # pandas sorts NaT to the END of an ascending sort_index() -- which is
+        # exactly what core/data_fetcher.get_prepared_data() calls right after
+        # this, and select_row()'s "Today" is literally data.iloc[-1]. A single
+        # bad TIMESTAMP therefore silently replaces "today's" real row with
+        # garbage, corrupting every indicator/score downstream. Drop it here.
+        bad_rows = df['Date'].isna().sum()
+        if bad_rows:
+            logger.warning(
+                "Dropping %d row(s) with unparseable TIMESTAMP for index=%s (sample: %s)",
+                bad_rows, index_name, df.loc[df['Date'].isna(), 'TIMESTAMP'].head(3).tolist(),
+            )
+            df = df.dropna(subset=['Date'])
+
+        if df.empty:
+            return pd.DataFrame()
+
         df.set_index('Date', inplace=True)
         
         # Strip commas from numbers and convert to float
